@@ -473,5 +473,54 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Change user password by providing the current password
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // Check if user is using social authentication
+        if ($user->is_social) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This account uses social login. You cannot change its password.',
+            ], 401);
+        }
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Current password is incorrect',
+            ], 401);
+        }
+
+        // Update password
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password has been changed successfully',
+        ]);
+    }
+
 
 }

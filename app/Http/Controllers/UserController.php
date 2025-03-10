@@ -47,6 +47,9 @@ class UserController extends Controller
             'phone_number' => 'sometimes|string|max:20',
             'city' => 'sometimes|string|max:100',
             'country' => 'sometimes|string|max:100',
+            'address' => 'sometimes|string|max:100',
+            'postal_code' => 'sometimes|string|max:100',
+            'name' => 'sometimes|string|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -58,7 +61,7 @@ class UserController extends Controller
         }
 
         // Update user details (only phone_number, city, country)
-        $userData = $request->only(['phone_number', 'city', 'country']);
+        $userData = $request->only(['phone_number', 'city', 'country', 'name', 'postal_code', 'address']);
         $user->update($userData);
 
         return response()->json([

@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\UserAddressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,11 +16,16 @@ use App\Http\Controllers\AdminController;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
 Route::post('/social-login', [AuthController::class, 'socialLogin']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
 Route::post('/email/verify', [AuthController::class, 'verify']);
+
+Route::middleware('auth:api')->group(function () {
+    Route::put('/change-password', [AuthController::class, 'changePassword']);
+});
 
 
 /*
@@ -65,4 +72,35 @@ Route::middleware('auth:api')->group(function () {
         Route::patch('admins/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
         Route::post('admins/create-with-user', [AdminController::class, 'createWithUser']);
     });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Routes Wishlist (à ajouter dans routes/api.php)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:api')->prefix('wishlist')->group(function () {
+    Route::get('/', [WishlistController::class, 'index']);
+    Route::post('/', [WishlistController::class, 'store']);
+    Route::get('/check/{productId}', [WishlistController::class, 'check']);
+    Route::delete('/{productId}', [WishlistController::class, 'destroy']);
+    Route::delete('/', [WishlistController::class, 'clear']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| User Addresses Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:api')->prefix('user/addresses')->group(function () {
+    Route::get('/', [UserAddressController::class, 'index']);
+    Route::post('/', [UserAddressController::class, 'store']);
+    Route::get('/{id}', [UserAddressController::class, 'show']);
+    Route::put('/{id}', [UserAddressController::class, 'update']);
+    Route::delete('/{id}', [UserAddressController::class, 'destroy']);
+    Route::put('/{id}/default', [UserAddressController::class, 'setDefault']);
+    Route::get('/type/{type}', [UserAddressController::class, 'getByType']);
+    Route::get('/type/{type}/default', [UserAddressController::class, 'getDefaultByType']);
 });
