@@ -15,6 +15,8 @@ class CartItem extends Model
         'quantity',
     ];
 
+    protected $appends = ['price', 'total'];
+
     // Relations
     public function cart()
     {
@@ -26,10 +28,13 @@ class CartItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Get price for this item
+    // Get price for this item (uses current price with discount)
     public function getPriceAttribute()
     {
-        return $this->product->current_price;
+        if (!$this->product) {
+            return 0;
+        }
+        return $this->product->discount_price ?? $this->product->price;
     }
 
     // Get total for this item

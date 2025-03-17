@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -81,6 +82,70 @@ class AdminController extends Controller
 
         return response()->json([
             'data' => $admin
+        ]);
+    }
+
+    /**
+     * Admin login with email and password
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function loginAdmin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if user exists
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid credentials',
+            ], 401);
+        }
+
+        // Check if user is an admin
+        $admin = Admin::where('user_id', $user->id)->where('status', true)->first();
+
+        if (!$admin) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You do not have admin privileges',
+            ], 403);
+        }
+
+        // Attempt to log the user in
+        if (!Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid credentials',
+            ], 401);
+        }
+
+        // Create token with admin scope
+        $token = $user->createToken('admin_token', ['admin'])->accessToken;
+
+        // Add admin information to user object
+        $user->admin = true;
+        $user->admin_role = $admin->role;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Admin login successful',
+            'user' => $user,
+            'token' => $token,
         ]);
     }
 

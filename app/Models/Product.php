@@ -61,10 +61,34 @@ class Product extends Model
         return $this->hasMany(InventoryMovement::class);
     }
 
-    // Get primary image
+    // Définir la relation pour l'image primaire - version corrigée
+    public function primaryImage()
+    {
+        // D'abord essayer de trouver une image primaire
+        return $this->hasOne(ProductImage::class)
+            ->where('is_primary', true)
+            ->orWhere(function ($query) {
+                // Si aucune image primaire n'est trouvée, prendre la première image
+                $query->where('product_id', $this->id)
+                    ->orderBy('id', 'asc')
+                    ->limit(1);
+            });
+    }
+
+    // Méthode d'accesseur pour obtenir l'image primaire
     public function getPrimaryImageAttribute()
     {
-        return $this->images()->where('is_primary', true)->first() ?? $this->images()->first();
+        $primaryImage = $this->images()
+            ->where('is_primary', true)
+            ->first();
+
+        if (!$primaryImage) {
+            $primaryImage = $this->images()
+                ->orderBy('id', 'asc')
+                ->first();
+        }
+
+        return $primaryImage;
     }
 
     // Check if product is in stock

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserPreference;
 use App\Models\UserAddress;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -96,18 +97,34 @@ class UserController extends Controller
         // Handle file upload
         if ($request->hasFile('profile_image')) {
             // Delete old image if exists
-            if ($user->profile_image && file_exists(storage_path('app/public/' . $user->profile_image))) {
-                unlink(storage_path('app/public/' . $user->profile_image));
+            if ($user->profile_image && file_exists(public_path(parse_url($user->profile_image, PHP_URL_PATH)))) {
+                unlink(public_path(parse_url($user->profile_image, PHP_URL_PATH)));
             }
 
-            // Store the new image
-            $path = $request->file('profile_image')->store('profile_images', 'public');
-            $user->update(['profile_image' => $path]);
+            // Generate a unique filename
+            $fileName = uniqid() . '_' . time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
+
+            // Destination path within public directory
+            $destinationPath = 'uploads/profiles';
+
+            // Create directory if it doesn't exist
+            if (!file_exists(public_path($destinationPath))) {
+                mkdir(public_path($destinationPath), 0755, true);
+            }
+
+            // Move the uploaded file to the public directory
+            $request->file('profile_image')->move(public_path($destinationPath), $fileName);
+
+            // Generate the URL for direct access
+            $url = url($destinationPath . '/' . $fileName);
+
+            // Update user with direct URL
+            $user->update(['profile_image' => $url]);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Profile image updated successfully',
-                'profile_image' => asset('storage/' . $path),
+                'profile_image' => $url,
                 'user' => $user->fresh(),
             ]);
         }
@@ -376,6 +393,318 @@ class UserController extends Controller
             'status' => 'success',
             'message' => 'Address set as default successfully',
             'address' => $address->fresh(),
+        ]);
+    }
+
+    /**
+     * Get all users (admin only)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getUsers(Request $request)
+    {
+        // Vérifier si l'utilisateur est un admin
+        $currentUser = Auth::user();
+        if (!$currentUser->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access',
+            ], 403);
+        }
+
+        // Paramètres de pagination et filtrage
+        $page = $request->query('page', 1);
+        $limit = $request->query('limit', 10);
+        $search = $request->query('search');
+        $sortBy = $request->query('sort_by', 'created_at');
+        $sortDirection = $request->query('sort_direction', 'desc');
+        $adminFilter = $request->has('admin') ? $request->query('admin') : null;
+        $isSocialFilter = $request->has('is_social') ? $request->query('is_social') : null;
+
+        // Requête de base
+        $query = User::query();
+
+        // Appliquer les filtres
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtre sur les admin
+        if ($adminFilter !== null) {
+            if ($adminFilter) {
+                $query->whereHas('admin');
+            } else {
+                $query->doesntHave('admin');
+            }
+        }
+
+        // Filtre sur les comptes sociaux
+        if ($isSocialFilter !== null) {
+            $query->where('is_social', $isSocialFilter);
+        }
+
+        // Tri
+        $query->orderBy($sortBy, $sortDirection);
+
+        // Pagination
+        $users = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Charger le rôle d'admin si présent
+        foreach ($users as $user) {
+            if ($user->admin) {
+                $user->admin_role = $user->admin->role;
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'users' => $users->items(),
+                'current_page' => $users->currentPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+                'last_page' => $users->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get a specific user by ID (admin only)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function getUserById(Request $request, $id)
+    {
+        // Vérifier si l'utilisateur est un admin
+        $currentUser = Auth::user();
+        if (!$currentUser->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access',
+            ], 403);
+        }
+
+        $user = User::with(['preferences', 'addresses'])->find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // Ajouter des informations sur le rôle d'admin
+        if ($user->admin) {
+            $user->admin_role = $user->admin->role;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $user,
+        ]);
+    }
+
+    /**
+     * Delete a user (admin only)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteUser(Request $request, $id)
+    {
+        // Vérifier si l'utilisateur est un admin
+        $currentUser = Auth::user();
+        if (!$currentUser->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access',
+            ], 403);
+        }
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // Empêcher la suppression d'un superadmin par un admin normal
+        if ($user->isSuperAdmin() && !$currentUser->isSuperAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You do not have permission to delete a super admin',
+            ], 403);
+        }
+
+        // Supprimer l'image de profil
+        if ($user->profile_image && file_exists(storage_path('app/public/' . $user->profile_image))) {
+            unlink(storage_path('app/public/' . $user->profile_image));
+        }
+
+        // Supprimer l'utilisateur
+        $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User deleted successfully',
+        ]);
+    }
+
+    /**
+     * Convert a social account to a regular account
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function convertSocialAccount(Request $request, $id)
+    {
+        // Vérifier si l'utilisateur est un admin
+        $currentUser = Auth::user();
+        if (!$currentUser->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access',
+            ], 403);
+        }
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if (!$user->is_social) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This account is not a social account',
+            ], 400);
+        }
+
+        // Mettre à jour pour convertir en compte normal
+        $user->update([
+            'is_social' => false,
+            'social_id' => null,
+            'social_type' => null,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Social account converted successfully',
+            'data' => $user->fresh(),
+        ]);
+    }
+
+    /**
+     * Toggle admin status for a user
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function toggleAdminStatus(Request $request, $id)
+    {
+        // Vérifier si l'utilisateur est un superadmin
+        $currentUser = Auth::user();
+        if (!$currentUser->isSuperAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only super admins can change admin status',
+            ], 403);
+        }
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $makeAdmin = $request->input('admin', false);
+
+        if ($makeAdmin) {
+            // Si l'utilisateur n'est pas déjà admin, créer un enregistrement admin
+            if (!$user->isAdmin()) {
+                Admin::create([
+                    'user_id' => $user->id,
+                    'role' => 'manager', // Rôle par défaut pour les nouveaux admins
+                    'status' => true,    // Actif par défaut
+                ]);
+            }
+        } else {
+            // Si l'utilisateur est admin, supprimer l'enregistrement admin
+            if ($user->isAdmin()) {
+                $user->admin()->delete();
+            }
+        }
+
+        $user = $user->fresh();
+        if ($user->admin) {
+            $user->admin_role = $user->admin->role;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $makeAdmin ? 'User promoted to admin' : 'Admin privileges removed',
+            'data' => $user,
+        ]);
+    }
+
+    /**
+     * Change user's password
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function changePassword(Request $request)
+    {
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Vérifier que le mot de passe actuel est correct
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Current password is incorrect',
+            ], 400);
+        }
+
+        // Mettre à jour le mot de passe
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password changed successfully',
         ]);
     }
 }

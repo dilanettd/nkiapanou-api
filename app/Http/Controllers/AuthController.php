@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserPreference;
+use App\Models\NewsletterSubscriber;
 use App\Events\Registered;
 use App\Events\PasswordResetRequested;
 use Illuminate\Auth\Events\Verified;
@@ -58,8 +59,28 @@ class AuthController extends Controller
         UserPreference::create([
             'user_id' => $user->id,
             'newsletter_subscription' => true,
-            'language' => $request->language ?? 'fr',
+            'language' => $request->language ?? 'en',
         ]);
+
+        // Inscription automatique à la newsletter
+        // Vérifier d'abord si l'email existe déjà dans la liste des abonnés
+        $newsletterSubscriber = NewsletterSubscriber::where('email', $request->email)->first();
+
+        if ($newsletterSubscriber) {
+            // Si l'abonné existe mais est désabonné, on le réactive
+            if ($newsletterSubscriber->status === 'unsubscribed') {
+                $newsletterSubscriber->status = 'active';
+                $newsletterSubscriber->save();
+            }
+            // Si déjà actif, ne rien faire
+        } else {
+            // Sinon, créer un nouvel abonnement à la newsletter
+            NewsletterSubscriber::create([
+                'email' => $request->email,
+                'name' => $request->name,
+                'status' => 'active',
+            ]);
+        }
 
         // Send verification email using custom event
         event(new Registered($user));
@@ -399,7 +420,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
+            'password' => 'required|min:8',
         ]);
 
         if ($validator->fails()) {
