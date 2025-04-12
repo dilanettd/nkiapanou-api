@@ -249,24 +249,28 @@ class ShippingFormulaController extends Controller
             $product = $item->product;
             $quantity = $item->quantity;
 
-            // Add weight
             if ($product->weight) {
-                $totalWeight += $product->weight * $quantity;
+                // Convertir de grammes en kilogrammes
+                $totalWeight += ($product->weight / 1000) * $quantity;
             }
 
-            // Calculate volume if dimensions are available
             if ($product->dimensions) {
-                // Assuming dimensions are stored as "LxWxH" in cm
-                $dimensions = explode('x', $product->dimensions);
+                $cleanDimensions = preg_replace('/[^0-9x\.]/', '', $product->dimensions);
+                $dimensions = explode('x', $cleanDimensions);
+
                 if (count($dimensions) === 3) {
-                    // Convert cm³ to m³
-                    $volume = ($dimensions[0] * $dimensions[1] * $dimensions[2]) / 1000000;
+                    $length = floatval($dimensions[0]);
+                    $width = floatval($dimensions[1]);
+                    $height = floatval($dimensions[2]);
+
+                    // Dimensions en cm → volume en m³ 
+                    // (longueur × largeur × hauteur) / 1 000 000
+                    $volume = ($length * $width * $height) / 1000000;
                     $totalVolume += $volume * $quantity;
                 }
             }
         }
 
-        // Check if weight exceeds maximum allowed
         if ($shippingFormula->max_weight && $totalWeight > $shippingFormula->max_weight) {
             return response()->json([
                 'status' => 'error',
@@ -278,7 +282,6 @@ class ShippingFormulaController extends Controller
             ], 400);
         }
 
-        // Calculate shipping cost
         $shippingCost = $shippingFormula->calculateShippingCost($totalWeight, $totalVolume);
 
         return response()->json([

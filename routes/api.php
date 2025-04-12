@@ -16,6 +16,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NewsletterSubscriberController;
 use App\Http\Controllers\ShippingFormulaController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ContactController;
 
 
 /*
@@ -35,7 +36,7 @@ Route::post('/resend-verification', [AuthController::class, 'resendVerification'
 Route::post('/email/verify', [AuthController::class, 'verify']);
 
 Route::middleware('auth:api')->group(function () {
-    Route::put('/change-password', [AuthController::class, 'changePassword']);
+  Route::put('/change-password', [AuthController::class, 'changePassword']);
 });
 
 /* |-------------------------------------------------------------------------- 
@@ -44,54 +45,53 @@ Route::middleware('auth:api')->group(function () {
 
 // Toutes ces routes sont protégées et nécessitent une authentification
 Route::middleware('auth:api')->group(function () {
-    // Profil utilisateur
-    Route::get('/profile', [UserController::class, 'getProfile']);
-    Route::put('/profile', [UserController::class, 'updateProfile']);
-    Route::post('/profile/image', [UserController::class, 'updateProfileImage']);
+  // Profil utilisateur
+  Route::get('/profile', [UserController::class, 'getProfile']);
+  Route::put('/profile', [UserController::class, 'updateProfile']);
+  Route::post('/profile/image', [UserController::class, 'updateProfileImage']);
 
-    // Changement de mot de passe
-    Route::put('/change-password', [UserController::class, 'changePassword']);
+  // Changement de mot de passe
+  Route::put('/change-password', [UserController::class, 'changePassword']);
 
-    // Préférences utilisateur
-    Route::put('/preferences', [UserController::class, 'updatePreferences']);
+  // Préférences utilisateur
+  Route::put('/preferences', [UserController::class, 'updatePreferences']);
 
-    // Adresses utilisateur
-    Route::get('/addresses', [UserController::class, 'getAddresses']);
-    Route::post('/addresses', [UserController::class, 'addAddress']);
-    Route::put('/addresses/{id}', [UserController::class, 'updateAddress']);
-    Route::delete('/addresses/{id}', [UserController::class, 'deleteAddress']);
-    Route::put('/addresses/{id}/default', [UserController::class, 'setDefaultAddress']);
+  // Adresses utilisateur
+  Route::get('/addresses', [UserController::class, 'getAddresses']);
+  Route::post('/addresses', [UserController::class, 'addAddress']);
+  Route::put('/addresses/{id}', [UserController::class, 'updateAddress']);
+  Route::delete('/addresses/{id}', [UserController::class, 'deleteAddress']);
+  Route::put('/addresses/{id}/default', [UserController::class, 'setDefaultAddress']);
 
-    // Routes d'administration (protégées par vérification d'admin dans les contrôleurs)
-    Route::get('/users', [UserController::class, 'getUsers']);
-    Route::get('/users/{id}', [UserController::class, 'getUserById']);
-    Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
-    Route::post('/users/{id}/convert-social', [UserController::class, 'convertSocialAccount']);
-    Route::patch('/users/{id}/admin-status', [UserController::class, 'toggleAdminStatus']);
+  // Routes d'administration (protégées par vérification d'admin dans les contrôleurs)
+  Route::get('/users', [UserController::class, 'getUsers']);
+  Route::get('/users/{id}', [UserController::class, 'getUserById']);
+  Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
+  Route::post('/users/{id}/convert-social', [UserController::class, 'convertSocialAccount']);
+  Route::patch('/users/{id}/admin-status', [UserController::class, 'toggleAdminStatus']);
 });
 
 
 /* |--------------------------------------------------------------------------
    | API Routes for Newsletter Subscription
    |-------------------------------------------------------------------------- */
-
 Route::post('/newsletter/subscribe', [NewsletterSubscriberController::class, 'subscribe']);
 Route::post('/newsletter/unsubscribe', [NewsletterSubscriberController::class, 'unsubscribe']);
 
 // Routes protégées pour l'administration
 Route::middleware('auth:api')->group(function () {
-    // Gestion des abonnés à la newsletter (admin)
-    Route::prefix('admin/newsletter')->group(function () {
-        Route::get('/subscribers', [NewsletterSubscriberController::class, 'index']);
-        Route::post('/subscribers', [NewsletterSubscriberController::class, 'store']);
-        Route::get('/subscribers/{id}', [NewsletterSubscriberController::class, 'show']);
-        Route::put('/subscribers/{id}', [NewsletterSubscriberController::class, 'update']);
-        Route::delete('/subscribers/{id}', [NewsletterSubscriberController::class, 'destroy']);
+  // Gestion des abonnés à la newsletter (admin)
+  Route::prefix('admin/newsletter')->group(function () {
+    Route::get('/subscribers', [NewsletterSubscriberController::class, 'index']);
+    Route::post('/subscribers', [NewsletterSubscriberController::class, 'store']);
+    Route::get('/subscribers/{id}', [NewsletterSubscriberController::class, 'show']);
+    Route::put('/subscribers/{id}', [NewsletterSubscriberController::class, 'update']);
+    Route::delete('/subscribers/{id}', [NewsletterSubscriberController::class, 'destroy']);
 
-        // Export CSV
-        Route::post('/export', [NewsletterSubscriberController::class, 'exportSelected']);
-        Route::get('/export-all', [NewsletterSubscriberController::class, 'exportAll']);
-    });
+    // Export CSV
+    Route::post('/export', [NewsletterSubscriberController::class, 'exportSelected']);
+    Route::get('/export-all', [NewsletterSubscriberController::class, 'exportAll']);
+  });
 });
 
 /*
@@ -107,13 +107,13 @@ Route::middleware('auth:api')->group(function () {
 // Route d'authentification admin
 Route::post('admin/login', [AdminController::class, 'loginAdmin']);
 Route::middleware('auth:api')->group(function () {
-    // Routes nécessitant une authentification
-    Route::middleware('admin')->group(function () {
-        // Routes pour les admins
-        Route::apiResource('admins', AdminController::class);
-        Route::patch('admins/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
-        Route::post('admins/create-with-user', [AdminController::class, 'createWithUser']);
-    });
+  // Routes nécessitant une authentification
+  Route::middleware('admin')->group(function () {
+    // Routes pour les admins
+    Route::apiResource('admins', AdminController::class);
+    Route::patch('admins/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
+    Route::post('admins/create-with-user', [AdminController::class, 'createWithUser']);
+  });
 });
 
 /*
@@ -122,11 +122,11 @@ Route::middleware('auth:api')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:api')->prefix('wishlist')->group(function () {
-    Route::get('/', [WishlistController::class, 'index']);
-    Route::post('/', [WishlistController::class, 'store']);
-    Route::get('/check/{productId}', [WishlistController::class, 'check']);
-    Route::delete('/{productId}', [WishlistController::class, 'destroy']);
-    Route::delete('/', [WishlistController::class, 'clear']);
+  Route::get('/', [WishlistController::class, 'index']);
+  Route::post('/', [WishlistController::class, 'store']);
+  Route::get('/check/{productId}', [WishlistController::class, 'check']);
+  Route::delete('/{productId}', [WishlistController::class, 'destroy']);
+  Route::delete('/', [WishlistController::class, 'clear']);
 });
 
 /*
@@ -136,14 +136,14 @@ Route::middleware('auth:api')->prefix('wishlist')->group(function () {
 */
 
 Route::middleware('auth:api')->prefix('user/addresses')->group(function () {
-    Route::get('/', [UserAddressController::class, 'index']);
-    Route::post('/', [UserAddressController::class, 'store']);
-    Route::get('/{id}', [UserAddressController::class, 'show']);
-    Route::put('/{id}', [UserAddressController::class, 'update']);
-    Route::delete('/{id}', [UserAddressController::class, 'destroy']);
-    Route::put('/{id}/default', [UserAddressController::class, 'setDefault']);
-    Route::get('/type/{type}', [UserAddressController::class, 'getByType']);
-    Route::get('/type/{type}/default', [UserAddressController::class, 'getDefaultByType']);
+  Route::get('/', [UserAddressController::class, 'index']);
+  Route::post('/', [UserAddressController::class, 'store']);
+  Route::get('/{id}', [UserAddressController::class, 'show']);
+  Route::put('/{id}', [UserAddressController::class, 'update']);
+  Route::delete('/{id}', [UserAddressController::class, 'destroy']);
+  Route::put('/{id}/default', [UserAddressController::class, 'setDefault']);
+  Route::get('/type/{type}', [UserAddressController::class, 'getByType']);
+  Route::get('/type/{type}/default', [UserAddressController::class, 'getDefaultByType']);
 });
 
 /* |-------------------------------------------------------------------------- 
@@ -157,23 +157,23 @@ Route::get('/products/slug/{slug}', [ProductController::class, 'showBySlug']);
 
 // Routes protégées pour l'administration
 Route::middleware('auth:api')->group(function () {
-    // Vérification du rôle admin à faire dans les contrôleurs
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{id}', [ProductController::class, 'update']);
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+  // Vérification du rôle admin à faire dans les contrôleurs
+  Route::post('/products', [ProductController::class, 'store']);
+  Route::put('/products/{id}', [ProductController::class, 'update']);
+  Route::delete('/products/{id}', [ProductController::class, 'destroy']);
 
-    // Gestion du statut et des produits mis en avant
-    Route::patch('/products/{id}/status', [ProductController::class, 'updateStatus']);
-    Route::patch('/products/{id}/featured', [ProductController::class, 'toggleFeatured']);
+  // Gestion du statut et des produits mis en avant
+  Route::patch('/products/{id}/status', [ProductController::class, 'updateStatus']);
+  Route::patch('/products/{id}/featured', [ProductController::class, 'toggleFeatured']);
 
-    // Upload d'image
-    Route::post('/upload/product', [ProductController::class, 'uploadImage']);
+  // Upload d'image
+  Route::post('/upload/product', [ProductController::class, 'uploadImage']);
 
-    // Gestion des images de produit
-    Route::post('/products/{id}/images', [ProductController::class, 'addProductImage']);
-    Route::patch('/products/{productId}/images/{imageId}', [ProductController::class, 'updateProductImage']);
-    Route::patch('/products/{productId}/images/{imageId}/primary', [ProductController::class, 'setImageAsPrimary']);
-    Route::delete('/products/{productId}/images/{imageId}', [ProductController::class, 'deleteProductImage']);
+  // Gestion des images de produit
+  Route::post('/products/{id}/images', [ProductController::class, 'addProductImage']);
+  Route::patch('/products/{productId}/images/{imageId}', [ProductController::class, 'updateProductImage']);
+  Route::patch('/products/{productId}/images/{imageId}/primary', [ProductController::class, 'setImageAsPrimary']);
+  Route::delete('/products/{productId}/images/{imageId}', [ProductController::class, 'deleteProductImage']);
 });
 
 /* |-------------------------------------------------------------------------- 
@@ -191,17 +191,17 @@ Route::get('/categories/{id}/all-products', [CategoryController::class, 'getAllC
 
 // Routes protégées pour l'administration
 Route::middleware('auth:api')->group(function () {
-    // Vérification du rôle admin à faire dans les contrôleurs
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::put('/categories/{id}', [CategoryController::class, 'update']);
-    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+  // Vérification du rôle admin à faire dans les contrôleurs
+  Route::post('/categories', [CategoryController::class, 'store']);
+  Route::put('/categories/{id}', [CategoryController::class, 'update']);
+  Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
-    // Gestion du statut
-    Route::patch('/categories/{id}/status', [CategoryController::class, 'updateStatus']);
-    Route::patch('/categories/{id}/status/toggle', [CategoryController::class, 'toggleStatus']);
+  // Gestion du statut
+  Route::patch('/categories/{id}/status', [CategoryController::class, 'updateStatus']);
+  Route::patch('/categories/{id}/status/toggle', [CategoryController::class, 'toggleStatus']);
 
-    // Upload d'image
-    Route::post('/upload/category', [CategoryController::class, 'uploadImage']);
+  // Upload d'image
+  Route::post('/upload/category', [CategoryController::class, 'uploadImage']);
 });
 
 /* |-------------------------------------------------------------------------- 
@@ -210,11 +210,11 @@ Route::middleware('auth:api')->group(function () {
 
 // Toutes les routes du panier nécessitent une authentification
 Route::middleware('auth:api')->group(function () {
-    Route::get('/cart', [CartController::class, 'getCart']);
-    Route::post('/cart', [CartController::class, 'addToCart']);
-    Route::put('/cart/{id}', [CartController::class, 'updateCartItem']);
-    Route::delete('/cart/{id}', [CartController::class, 'removeCartItem']);
-    Route::delete('/cart/clear', [CartController::class, 'clearCart']);
+  Route::get('/cart', [CartController::class, 'getCart']);
+  Route::post('/cart', [CartController::class, 'addToCart']);
+  Route::put('/cart/{id}', [CartController::class, 'updateCartItem']);
+  Route::delete('/cart/{id}', [CartController::class, 'removeCartItem']);
+  Route::delete('/cart/clear', [CartController::class, 'clearCart']);
 });
 
 /* |-------------------------------------------------------------------------- 
@@ -227,15 +227,15 @@ Route::get('/reviews/top', [ProductReviewController::class, 'getTopReviews']);
 
 // Routes authentifiées
 Route::middleware('auth:api')->group(function () {
-    Route::post('/reviews', [ProductReviewController::class, 'store']);
-    Route::delete('/reviews/{id}', [ProductReviewController::class, 'destroy']);
-    Route::get('/user/reviews', [ProductReviewController::class, 'getUserReviews']);
-    Route::get('/users/{id}/reviews', [ProductReviewController::class, 'getUserReviews']);
-    Route::prefix('admin')->group(function () {
-        Route::get('/reviews', [ProductReviewController::class, 'index']);
-        Route::get('/reviews/{id}', [ProductReviewController::class, 'show']);
-        Route::patch('/reviews/{id}/status', [ProductReviewController::class, 'updateStatus']);
-    });
+  Route::post('/reviews', [ProductReviewController::class, 'store']);
+  Route::delete('/reviews/{id}', [ProductReviewController::class, 'destroy']);
+  Route::get('/user/reviews', [ProductReviewController::class, 'getUserReviews']);
+  Route::get('/users/{id}/reviews', [ProductReviewController::class, 'getUserReviews']);
+  Route::prefix('admin')->group(function () {
+    Route::get('/reviews', [ProductReviewController::class, 'index']);
+    Route::get('/reviews/{id}', [ProductReviewController::class, 'show']);
+    Route::patch('/reviews/{id}/status', [ProductReviewController::class, 'updateStatus']);
+  });
 });
 
 
@@ -245,11 +245,11 @@ Route::middleware('auth:api')->group(function () {
 
 // Toutes les routes nécessitent une authentification et des droits d'admin
 Route::middleware(['auth:api'])->group(function () {
-    Route::get('/inventory/movements', [InventoryMovementController::class, 'index']);
-    Route::post('/inventory/movements', [InventoryMovementController::class, 'store']);
-    Route::get('/inventory/movements/{id}', [InventoryMovementController::class, 'show']);
-    Route::get('/inventory/products/{productId}/history', [InventoryMovementController::class, 'getProductHistory']);
-    Route::get('/inventory/summary', [InventoryMovementController::class, 'getSummary']);
+  Route::get('/inventory/movements', [InventoryMovementController::class, 'index']);
+  Route::post('/inventory/movements', [InventoryMovementController::class, 'store']);
+  Route::get('/inventory/movements/{id}', [InventoryMovementController::class, 'show']);
+  Route::get('/inventory/products/{productId}/history', [InventoryMovementController::class, 'getProductHistory']);
+  Route::get('/inventory/summary', [InventoryMovementController::class, 'getSummary']);
 });
 
 
@@ -259,20 +259,20 @@ Route::middleware(['auth:api'])->group(function () {
 
 // Routes pour les commandes de l'utilisateur connecté
 Route::middleware('auth:api')->group(function () {
-    Route::get('/orders', [OrderController::class, 'getUserOrders']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::patch('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
-    Route::get('/orders/history', [OrderController::class, 'getOrdersHistory']);
+  Route::get('/orders', [OrderController::class, 'getUserOrders']);
+  Route::get('/orders/{id}', [OrderController::class, 'show']);
+  Route::post('/orders', [OrderController::class, 'store']);
+  Route::patch('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
+  Route::get('/orders/history', [OrderController::class, 'getOrdersHistory']);
 });
 
 // Routes d'administration des commandes
 Route::middleware(['auth:api'])->prefix('admin')->group(function () {
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
-    Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-    Route::patch('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
-    Route::patch('/orders/{id}/tracking', [OrderController::class, 'updateTrackingNumber']);
+  Route::get('/orders', [OrderController::class, 'index']);
+  Route::get('/orders/{id}', [OrderController::class, 'show']);
+  Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+  Route::patch('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+  Route::patch('/orders/{id}/tracking', [OrderController::class, 'updateTrackingNumber']);
 });
 
 
@@ -282,18 +282,18 @@ Route::middleware(['auth:api'])->prefix('admin')->group(function () {
 
 // Routes protégées pour l'administration (nécessitent une authentification)
 Route::middleware(['auth:api'])->prefix('admin/dashboard')->group(function () {
-    // Route principale qui renvoie toutes les données du tableau de bord
-    Route::get('/', [DashboardController::class, 'index']);
+  // Route principale qui renvoie toutes les données du tableau de bord
+  Route::get('/', [DashboardController::class, 'index']);
 
-    // Routes pour les différentes sections du tableau de bord
-    Route::get('/summary', [DashboardController::class, 'getSummary']);
-    Route::get('/sales/daily', [DashboardController::class, 'getDailySales']);
-    Route::get('/sales/monthly', [DashboardController::class, 'getMonthlySales']);
-    Route::get('/products/top', [DashboardController::class, 'getTopProducts']);
-    Route::get('/categories/top', [DashboardController::class, 'getTopCategories']);
+  // Routes pour les différentes sections du tableau de bord
+  Route::get('/summary', [DashboardController::class, 'getSummary']);
+  Route::get('/sales/daily', [DashboardController::class, 'getDailySales']);
+  Route::get('/sales/monthly', [DashboardController::class, 'getMonthlySales']);
+  Route::get('/products/top', [DashboardController::class, 'getTopProducts']);
+  Route::get('/categories/top', [DashboardController::class, 'getTopCategories']);
 
-    // Vous pouvez également ajouter d'autres routes spécifiques au besoin
-    // Par exemple pour les statistiques personnalisées ou des périodes différentes
+  // Vous pouvez également ajouter d'autres routes spécifiques au besoin
+  // Par exemple pour les statistiques personnalisées ou des périodes différentes
 });
 
 
@@ -306,12 +306,12 @@ Route::post('/shipping/calculate', [ShippingFormulaController::class, 'calculate
 
 // Routes protégées pour l'administration
 Route::middleware('auth:api')->group(function () {
-    // Vérification du rôle admin à faire dans un middleware
-    Route::get('/admin/shipping', [ShippingFormulaController::class, 'index']);
-    Route::post('/admin/shipping', [ShippingFormulaController::class, 'store']);
-    Route::get('/admin/shipping/{id}', [ShippingFormulaController::class, 'show']);
-    Route::put('/admin/shipping/{id}', [ShippingFormulaController::class, 'update']);
-    Route::delete('/admin/shipping/{id}', [ShippingFormulaController::class, 'destroy']);
+  // Vérification du rôle admin à faire dans un middleware
+  Route::get('/admin/shipping', [ShippingFormulaController::class, 'index']);
+  Route::post('/admin/shipping', [ShippingFormulaController::class, 'store']);
+  Route::get('/admin/shipping/{id}', [ShippingFormulaController::class, 'show']);
+  Route::put('/admin/shipping/{id}', [ShippingFormulaController::class, 'update']);
+  Route::delete('/admin/shipping/{id}', [ShippingFormulaController::class, 'destroy']);
 });
 
 
@@ -320,15 +320,41 @@ Route::middleware('auth:api')->group(function () {
   |-------------------------------------------------------------------------- */
 // Routes protégées par authentification
 Route::middleware('auth:api')->group(function () {
-    // Routes pour les utilisateurs normaux
-    Route::get('/transactions/user', [TransactionController::class, 'getUserTransactions']);
-    Route::get('/orders/{orderId}/transactions', [TransactionController::class, 'getOrderTransactions']);
+  // Routes pour les utilisateurs normaux
+  Route::get('/transactions/user', [TransactionController::class, 'getUserTransactions']);
+  Route::get('/orders/{orderId}/transactions', [TransactionController::class, 'getOrderTransactions']);
 
-    // Routes pour les administrateurs (protégées par vérification admin dans le contrôleur)
-    Route::get('/admin/transactions', [TransactionController::class, 'index']);
-    Route::get('/admin/transactions/{id}', [TransactionController::class, 'show']);
-    Route::post('/admin/transactions', [TransactionController::class, 'store']);
-    Route::put('/admin/transactions/{id}', [TransactionController::class, 'update']);
-    Route::post('/admin/transactions/refund', [TransactionController::class, 'processRefund']);
-    Route::get('/admin/transaction/statistics', [TransactionController::class, 'getStatistics']);
+  // Routes pour les administrateurs (protégées par vérification admin dans le contrôleur)
+  Route::get('/admin/transactions', [TransactionController::class, 'index']);
+  Route::get('/admin/transactions/{id}', [TransactionController::class, 'show']);
+  Route::post('/admin/transactions', [TransactionController::class, 'store']);
+  Route::put('/admin/transactions/{id}', [TransactionController::class, 'update']);
+  Route::post('/admin/transactions/refund', [TransactionController::class, 'processRefund']);
+  Route::get('/admin/transaction/statistics', [TransactionController::class, 'getStatistics']);
+});
+
+/* |-------------------------------------------------------------------------- 
+  | API Routes for Contact Form
+  |-------------------------------------------------------------------------- */
+// Route publique pour l'envoi de messages de contact
+Route::post('/contact', [ContactController::class, 'store']);
+
+// Routes protégées pour l'administration des messages
+Route::middleware('auth:api')->group(function () {
+  // Routes d'admin (la vérification d'admin se fait dans le contrôleur)
+  Route::get('/admin/contacts', [ContactController::class, 'index']);
+  Route::get('/admin/contacts/{id}', [ContactController::class, 'show']);
+  Route::patch('/admin/contacts/{id}/read', [ContactController::class, 'markAsRead']);
+  Route::post('/admin/contacts/mark-read', [ContactController::class, 'markMultipleAsRead']);
+  Route::delete('/admin/contacts/{id}', [ContactController::class, 'destroy']);
+  Route::get('/admin/contacts/unread/count', [ContactController::class, 'countUnread']);
+});
+
+/* |-------------------------------------------------------------------------- 
+  | API Routes for Stripe
+  |-------------------------------------------------------------------------- */
+Route::prefix('stripe')->group(function () {
+  Route::post('/create-payment-intent', [App\Http\Controllers\Api\StripePaymentController::class, 'createPaymentIntent']);
+  Route::post('/confirm-payment', [App\Http\Controllers\Api\StripePaymentController::class, 'confirmPayment']);
+  Route::post('/webhooks', [App\Http\Controllers\Api\StripePaymentController::class, 'handleWebhook']);
 });

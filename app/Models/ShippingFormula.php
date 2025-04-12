@@ -50,26 +50,37 @@ class ShippingFormula extends Model
      * @param float|null $volume Volume in cubic meters (optional)
      * @return float Calculated shipping cost
      */
-    public function calculateShippingCost($weight, $volume = null)
+    public function calculateShippingCost($weight, $volume)
     {
-        // Base formula: base_fee + (weight * price_per_kg)
-        $cost = $this->base_fee + ($weight * $this->price_per_kg);
+        // Convertir les entrées en nombres pour s'assurer qu'elles sont numériques
+        $weight = floatval($weight);
+        $volume = floatval($volume);
+        $baseRate = floatval($this->base_fee);
+        $pricePerKg = floatval($this->price_per_kg);
+        $minShippingFee = floatval($this->min_shipping_fee);
 
-        // Add volume-based cost if provided and applicable
-        if ($volume !== null && $this->price_per_cubic_meter !== null) {
-            $cost += $volume * $this->price_per_cubic_meter;
+        // Calculer le coût basé sur le poids
+        $weightCost = $weight * $pricePerKg;
+
+        // Calculer le coût basé sur le volume (si applicable)
+        $volumeCost = 0;
+        if ($volume > 0 && $this->price_per_cubic_meter) {
+            $volumeCost = $volume * floatval($this->price_per_cubic_meter);
         }
 
-        // Apply handling fee percentage
+        // Déterminer le coût le plus élevé entre le poids et le volume
+        $costBasedOnDimensions = max($weightCost, $volumeCost);
+
+        // Ajouter le tarif de base
+        $totalCost = $baseRate + $costBasedOnDimensions;
+
+        // Ajouter les frais de manutention (si applicable)
         if ($this->handling_fee_percentage > 0) {
-            $cost *= (1 + ($this->handling_fee_percentage / 100));
+            $handlingFee = $totalCost * (floatval($this->handling_fee_percentage) / 100);
+            $totalCost += $handlingFee;
         }
 
-        // Ensure minimum shipping fee
-        if ($cost < $this->min_shipping_fee) {
-            $cost = $this->min_shipping_fee;
-        }
-
-        return $cost;
+        // Appliquer le tarif minimum d'expédition si nécessaire
+        return max($totalCost, $minShippingFee);
     }
 }
