@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -20,12 +20,6 @@ class StripePaymentController extends Controller
         $this->stripeService = $stripeService;
     }
 
-    /**
-     * Créer un PaymentIntent pour une commande
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function createPaymentIntent(Request $request)
     {
         // Validation des données
@@ -50,12 +44,16 @@ class StripePaymentController extends Controller
             ], 400);
         }
 
+        // Récupérer l'utilisateur lié à la commande
+        $user = User::find($order->user_id);
+        $userEmail = $user ? $user->email : 'client@example.com';
+        $userName = $user ? $user->name : 'Client';
+
         // Créer le PaymentIntent avec des métadonnées
         $metadata = [
             'order_id' => $order->id,
             'order_number' => $order->order_number,
-            // Utiliser l'email de l'utilisateur associé à la commande
-            'customer_email' => User::find($order->user_id)->email ?? 'client@example.com',
+            'customer_email' => $userEmail,
         ];
 
         $result = $this->stripeService->createPaymentIntent(
@@ -82,26 +80,27 @@ class StripePaymentController extends Controller
         $order->payment_status = 'pending';
         $order->save();
 
-        // Créer une transaction
-        try {
-            $transaction = new Transaction();
-            $transaction->order_id = $order->id;
-            $transaction->user_id = $order->user_id;
-            $transaction->amount = $order->total_amount;
-            $transaction->currency = $request->currency;
-            $transaction->payment_method = 'stripe';
-            $transaction->payment_id = $result['paymentIntentId'];
-            $transaction->status = 'pending';
-            $transaction->transaction_type = 'payment';
-            $transaction->reference_number = $order->order_number;
-            $transaction->billing_email = User::find($order->user_id)->email ?? 'client@example.com';
-            $transaction->save();
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la création de la transaction', [
-                'error' => $e->getMessage(),
-                'order_id' => $order->id
-            ]);
-        }
+        // Créer une transaction en utilisant les attributs mass-assignable
+        Transaction::create([
+            'order_id' => $order->id,
+            'amount' => $order->total_amount,
+            'currency' => $request->currency,
+            'payment_method' => Transaction::METHOD_STRIPE,
+            'payment_id' => $result['paymentIntentId'],
+            'status' => Transaction::STATUS_PENDING,
+            'transaction_type' => Transaction::TYPE_PAYMENT,
+            'reference_number' => $order->order_number,
+            'billing_email' => $userEmail,
+            'billing_name' => $userName,
+            'payment_method_details' => 'Stripe',
+            'notes' => 'Paiement initial pour la commande ' . $order->order_number,
+        ]);
+
+        // Journaliser la création de la transaction
+        Log::info('Transaction créée avec succès', [
+            'order_id' => $order->id,
+            'payment_id' => $result['paymentIntentId']
+        ]);
 
         return response()->json([
             'success' => true,

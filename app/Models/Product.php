@@ -33,6 +33,10 @@ class Product extends Model
         'featured' => 'boolean',
     ];
 
+    protected $appends = [
+        'primary_image_url',
+    ];
+
     // Generate slug for product
     public function setNameAttribute($value)
     {
@@ -89,6 +93,19 @@ class Product extends Model
         }
 
         return $primaryImage;
+    }
+
+    // Nouvel accesseur pour obtenir directement l'URL de l'image primaire
+    public function getPrimaryImageUrlAttribute()
+    {
+        $primaryImage = $this->primary_image;
+
+        if ($primaryImage) {
+            return $primaryImage->image_url;
+        }
+
+        // Retourner une image par défaut ou null
+        return null;
     }
 
     // Check if product is in stock

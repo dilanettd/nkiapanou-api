@@ -17,6 +17,7 @@ use App\Http\Controllers\NewsletterSubscriberController;
 use App\Http\Controllers\ShippingFormulaController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\StripePaymentController;
 
 
 /*
@@ -213,7 +214,7 @@ Route::middleware('auth:api')->group(function () {
   Route::get('/cart', [CartController::class, 'getCart']);
   Route::post('/cart', [CartController::class, 'addToCart']);
   Route::put('/cart/{id}', [CartController::class, 'updateCartItem']);
-  Route::delete('/cart/{id}', [CartController::class, 'removeCartItem']);
+  Route::delete('/cart/cart/remove/{id}', [CartController::class, 'removeCartItem']);
   Route::delete('/cart/clear', [CartController::class, 'clearCart']);
 });
 
@@ -354,7 +355,7 @@ Route::middleware('auth:api')->group(function () {
   | API Routes for Stripe
   |-------------------------------------------------------------------------- */
 Route::prefix('stripe')->group(function () {
-  Route::post('/create-payment-intent', [App\Http\Controllers\Api\StripePaymentController::class, 'createPaymentIntent']);
-  Route::post('/confirm-payment', [App\Http\Controllers\Api\StripePaymentController::class, 'confirmPayment']);
-  Route::post('/webhooks', [App\Http\Controllers\Api\StripePaymentController::class, 'handleWebhook']);
+  Route::post('/create-payment-intent', [StripePaymentController::class, 'createPaymentIntent']);
+  Route::post('/confirm-payment', [StripePaymentController::class, 'confirmPayment']);
+  Route::post('/webhooks', [StripePaymentController::class, 'handleWebhook']);
 });

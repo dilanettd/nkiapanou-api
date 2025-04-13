@@ -260,10 +260,6 @@ class OrderController extends Controller
                     'price' => $itemPrice,
                     'total' => $itemTotal,
                 ];
-
-                // Mettre à jour le stock du produit
-                $product->quantity -= $itemData['quantity'];
-                $product->save();
             }
 
             // Utiliser le montant total fourni par le client
@@ -282,18 +278,31 @@ class OrderController extends Controller
                     'tax_amount' => $request->tax_amount,
                     'discount_amount' => $request->discount_amount ?? 0
                 ]);
-
-                // Vous pouvez choisir d'utiliser le montant calculé plutôt que celui fourni
-                // $totalAmount = $calculatedTotal;
-
-                // Ou renvoyer une erreur
-                // return response()->json([
-                //    'status' => 'error',
-                //    'message' => 'Total amount mismatch',
-                // ], 400);
             }
 
-            // Créer la commande
+            // Vérifier si une commande similaire en attente existe déjà pour cet utilisateur
+            $existingOrder = $this->findSimilarPendingOrder($user->id, $request);
+
+            if ($existingOrder) {
+                // Mettre à jour la date de la commande existante
+                $existingOrder->touch();
+                $existingOrder->payment_method = $request->payment_method;
+                $existingOrder->save();
+
+                DB::commit();
+
+                // Charger les relations pour la réponse
+                $existingOrder->load(['user', 'items.product']);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Existing order updated',
+                    'data' => $existingOrder,
+                    'is_existing' => true,
+                ]);
+            }
+
+            // Aucune commande similaire trouvée, créer une nouvelle commande
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_number' => $this->generateOrderNumber(),
@@ -317,6 +326,11 @@ class OrderController extends Controller
 
             // Créer les éléments de commande
             foreach ($items as $item) {
+                // Mettre à jour le stock du produit uniquement pour les nouvelles commandes
+                $product = Product::findOrFail($item['product_id']);
+                $product->quantity -= $item['quantity'];
+                $product->save();
+
                 $order->items()->create($item);
             }
 
@@ -329,6 +343,7 @@ class OrderController extends Controller
                 'status' => 'success',
                 'message' => 'Order created successfully',
                 'data' => $order,
+                'is_existing' => false,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -338,6 +353,70 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Find a similar pending order for the user
+     * 
+     * @param int $userId
+     * @param Request $request
+     * @return Order|null
+     */
+    private function findSimilarPendingOrder($userId, Request $request)
+    {
+        // Trouver les commandes en attente de cet utilisateur
+        $pendingOrders = Order::where('user_id', $userId)
+            ->where('status', 'pending')
+            ->where('payment_status', 'pending')
+            ->with('items')
+            ->get();
+
+        foreach ($pendingOrders as $order) {
+            // 1. Vérifier si le montant total est similaire (tolérance de 1€)
+            if (abs($order->total_amount - $request->total_amount) > 1) {
+                continue;
+            }
+
+            // 2. Vérifier si les adresses correspondent
+            $shippingAddress = UserAddress::findOrFail($request->shipping_address_id);
+
+            if (
+                $order->shipping_address !== $shippingAddress->address_line1 ||
+                $order->shipping_postal_code !== $shippingAddress->postal_code
+            ) {
+                continue;
+            }
+
+            // 3. Vérifier si les articles sont les mêmes
+            $requestItems = collect($request->items)->sortBy('product_id');
+            $orderItems = $order->items->sortBy('product_id');
+
+            // Vérifier si le nombre d'articles est identique
+            if ($requestItems->count() !== $orderItems->count()) {
+                continue;
+            }
+
+            // Vérifier si les produits et les quantités correspondent
+            $itemsMatch = true;
+            foreach ($requestItems as $index => $requestItem) {
+                $orderItem = $orderItems->values()[$index] ?? null;
+
+                if (
+                    !$orderItem ||
+                    $orderItem->product_id != $requestItem['product_id'] ||
+                    $orderItem->quantity != $requestItem['quantity']
+                ) {
+                    $itemsMatch = false;
+                    break;
+                }
+            }
+
+            if ($itemsMatch) {
+                return $order;
+            }
+        }
+
+        return null;
     }
 
     /**
