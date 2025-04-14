@@ -2,9 +2,7 @@
     {{-- Header --}}
     <x-slot:header>
         <x-mail::header :url="config('app.url')">
-            <img style="width: 100px;"
-                src="https://getlogovector.com/wp-content/uploads/2020/11/toss-payments-logo-vector.png"
-                alt="FlexnkentPay">
+            <img style="width: 100px;" src="https://nkiapanou.com/assets/images/logo.jpeg" alt="logo">
         </x-mail::header>
     </x-slot:header>
 

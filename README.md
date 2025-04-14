@@ -1,6 +1,6 @@
-# FlexNkentPay
+# Nkiapanou
 
-FlexNkentPay is an online platform that helps shop owners manage their stock and sales efficiently. It provides insights into buyer behavior, supports installment payments, and tracks payment balances.
+Nkiapanou is an online platform that helps shop owners manage their stock and sales efficiently. It provides insights into buyer behavior, supports installment payments, and tracks payment balances.
 
 ## Features
 
@@ -15,8 +15,8 @@ FlexNkentPay is an online platform that helps shop owners manage their stock and
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/yourusername/flexnkentpay.git
-    cd flexnkentpay
+    git clone https://github.com/yourusername/nkiapanou.git
+    cd nkiapanou
 
     ```
 

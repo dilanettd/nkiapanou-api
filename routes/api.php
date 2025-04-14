@@ -359,3 +359,12 @@ Route::prefix('stripe')->group(function () {
   Route::post('/confirm-payment', [StripePaymentController::class, 'confirmPayment']);
   Route::post('/webhooks', [StripePaymentController::class, 'handleWebhook']);
 });
+
+/* |-------------------------------------------------------------------------- 
+  | API Routes for PayPal
+  |-------------------------------------------------------------------------- */
+Route::prefix('paypal')->group(function () {
+  Route::post('/create-order', [App\Http\Controllers\Api\PaypalPaymentController::class, 'createOrder']);
+  Route::post('/capture-payment', [App\Http\Controllers\Api\PaypalPaymentController::class, 'capturePayment']);
+  Route::post('/webhooks', [App\Http\Controllers\Api\PaypalPaymentController::class, 'handleWebhook']);
+});
